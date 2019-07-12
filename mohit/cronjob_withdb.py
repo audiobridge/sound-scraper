@@ -38,23 +38,32 @@ for keyStrg in myresult:
     mycursor.execute(sql, val)
     mydb.commit()
 
-    # ---------Page wise data loop - start fetching...
+    # ---------Page wise data loop - start fetching-----------
     while total_page >= key_page: # print(vars(results_pager))
         for text_data in results_pager:
-            sound = freesound_client.get_sound(
-                text_data.id,
-                fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
-            )
-            sound_dict = sound.as_dict()
-            # exit()
-            sql = "INSERT INTO tbl_sounds (id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
-            val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
-            try:
-                mycursor.execute(sql, val)
-                mydb.commit()
-                print("Inserted row: ", sound.id)
-            except mysql.connector.IntegrityError as err:
-                print("Duplicate data Error: {}".format(err))
+            sql = "SELECT * FROM tbl_sounds WHERE freesound_id = %s"
+            adr = (text_data.id,)
+            mycursor.execute(sql, adr)
+            isDup = mycursor.fetchall()
+            if isDup:
+                print('Duplicate entry : skipped - ',text_data.id)
+                continue
+            else:
+                # print('Start Now...',text_data.id)
+                sound = freesound_client.get_sound(
+                    text_data.id,
+                    fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
+                )
+                sound_dict = sound.as_dict()
+                # exit()
+                sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
+                val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
+                try:
+                    mycursor.execute(sql, val)
+                    mydb.commit()
+                    print("Inserted row: ", sound.id)
+                except mysql.connector.IntegrityError as err:
+                    print("Duplicate data Error: {}".format(err))
 
         #----------- Update key serach table on next api call --------------------------
         now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')

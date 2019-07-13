@@ -6,6 +6,21 @@ import json
 import mysql.connector
 import math
 import datetime
+import time
+
+# Start time
+start_time = time.time()
+api_call_count = 0
+
+api_minute_limit = 60
+api_second_limit = api_minute_limit/60
+
+def throttleCheck(throttle_check):
+    if(throttle_check > 0):
+        # Sleep for needed time plus 5s as a buffer
+        time_correction = throttle_check + 5
+        print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
+        time.sleep(time_correction)
 
 mydb = mysql.connector.connect(host="localhost",user="root",passwd="",database="db_freesound")
 mycursor = mydb.cursor()
@@ -20,6 +35,7 @@ for keyStrg in myresult:
     key_string = keyStrg[0]
     key_page = keyStrg[1]
     print("===========Start key========== Page:",key_page,"========:",key_string)
+    
     # Get text info details
     results_pager = freesound_client.text_search(
         page=key_page,
@@ -27,6 +43,8 @@ for keyStrg in myresult:
         query=key_string,
         fields="id,username"
     )
+    api_call_count+=1
+
     # print(results_pager.as_dict())
     print("Num results:", results_pager.count)
     total_page = math.ceil(results_pager.count / 150)
@@ -54,6 +72,8 @@ for keyStrg in myresult:
                     text_data.id,
                     fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
                 )
+                api_call_count+=1
+
                 sound_dict = sound.as_dict()
                 # exit()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
@@ -61,7 +81,19 @@ for keyStrg in myresult:
                 try:
                     mycursor.execute(sql, val)
                     mydb.commit()
-                    print("Inserted row: ", sound.id)
+                    print("\nInserted row: ", sound.id)
+                    # your code
+
+                    # Print elapsed time
+                    elapsed_time = time.time() - start_time
+                    print("Time elapsed: ", elapsed_time)
+
+                    # Print number of API calls
+                    print("API calls: ", str(api_call_count))
+
+                    throttle_check = api_call_count - elapsed_time
+                    throttleCheck(throttle_check)
+
                 except mysql.connector.IntegrityError as err:
                     print("Duplicate data Error: {}".format(err))
 

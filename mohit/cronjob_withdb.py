@@ -13,11 +13,6 @@ parser = ArgumentParser()
 parser.add_argument("-d", "--daily_throttle", help="Turn off the daily throttle limit")
 args = parser.parse_args()
 
-if(args.daily_throttle != 'false'):
-    print("test")
-
-sys.exit()
-
 # Start time
 start_time = time.time()
 api_call_count = 0

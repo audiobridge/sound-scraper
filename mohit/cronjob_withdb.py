@@ -29,8 +29,10 @@ api_daily_limit = 2000
 api_daily_minute_limit = api_daily_limit/1440
 
 def throttleCheck(api_call_count, elapsed_time, time_period):
+    throttle_check_per_second = api_call_count/elapsed_time
+    throttle_check_per_minute = api_call_count/(elapsed_time/60)
+
     if(time_period == 'per_second'):
-        throttle_check_per_second = api_call_count/elapsed_time
         if(throttle_check_per_second > api_second_limit):
             over_limit = throttle_check_per_second - api_second_limit
             # Sleep for needed time plus 5s as a buffer
@@ -40,14 +42,17 @@ def throttleCheck(api_call_count, elapsed_time, time_period):
             time.sleep(time_correction)
 
     if(time_period == 'per_minute'):
-        throttle_check_per_minute = api_call_count/(elapsed_time/60)
         print("Per minute limit per day = " + str(api_daily_minute_limit))
         print("Current API calls per minute = " + str(throttle_check_per_minute))
         if(throttle_check_per_minute > api_daily_minute_limit):
             over_limit = throttle_check_per_minute - api_daily_minute_limit
-            # Sleep for needed time plus 5s as a buffer
+            # Sleep for needed time plus 60s as a buffer
             print("Performing per minute throttling. " + str(over_limit) + " API calls over per minute limit.")
-            time_correction = (throttle_check_per_minute/60) + 5
+            
+            # Detect number of API calls per second and multiply by number over per minute
+            # This is overall the wrong logic but will help for now
+            #time_correction = throttle_check_per_second * over_limit if throttle_check_per_second > 1 else over_limit
+            time_correction = 60
             print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
             time.sleep(time_correction)
 

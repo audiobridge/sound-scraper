@@ -1,4 +1,5 @@
-from __future__ import print_function
+from __future__ import print_function, division
+from argparse import ArgumentParser
 import freesound
 import os
 import sys
@@ -8,21 +9,54 @@ import math
 import datetime
 import time
 
+parser = ArgumentParser()
+parser.add_argument("-d", "--daily_throttle", help="Turn off the daily throttle limit")
+args = parser.parse_args()
+
+if(args.daily_throttle != 'false'):
+    print("test")
+
+sys.exit()
+
 # Start time
 start_time = time.time()
 api_call_count = 0
+minutes_passed = 0
 
+# Set API minute limits based on throttling
+# 60 seconds in a minute
 api_minute_limit = 60
 api_second_limit = api_minute_limit/60
 
-def throttleCheck(throttle_check):
-    if(throttle_check > 0):
-        # Sleep for needed time plus 5s as a buffer
-        time_correction = throttle_check + 5
-        print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
-        time.sleep(time_correction)
+# Set API daily limits based on throttling
+# 1440 minutes in a day
+api_daily_limit = 2000
+api_daily_minute_limit = api_daily_limit/1440
 
-mydb = mysql.connector.connect(host="localhost",user="root",passwd="",database="db_freesound")
+def throttleCheck(api_call_count, elapsed_time, time_period):
+    if(time_period == 'per_second'):
+        throttle_check_per_second = api_call_count/elapsed_time
+        if(throttle_check_per_second > api_second_limit):
+            over_limit = throttle_check_per_second - api_second_limit
+            # Sleep for needed time plus 5s as a buffer
+            print("Performing per second throttling. " + str(over_limit) + " API calls over per second limit.")
+            time_correction = throttle_check_per_second + 5
+            print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
+            time.sleep(time_correction)
+
+    if(time_period == 'per_minute'):
+        throttle_check_per_minute = api_call_count/(elapsed_time/60)
+        print("Per minute limit per day = " + str(api_daily_minute_limit))
+        print("Current API calls per minute = " + str(throttle_check_per_minute))
+        if(throttle_check_per_minute > api_daily_minute_limit):
+            over_limit = throttle_check_per_minute - api_daily_minute_limit
+            # Sleep for needed time plus 5s as a buffer
+            print("Performing per minute throttling. " + str(over_limit) + " API calls over per minute limit.")
+            time_correction = (throttle_check_per_minute/60) + 5
+            print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
+            time.sleep(time_correction)
+
+mydb = mysql.connector.connect(host="localhost",user="root",passwd="password",database="db_freesound")
 mycursor = mydb.cursor()
 mycursor.execute("SELECT item_name,current_page FROM search_keys where search_keys.status != 2 order by search_keys.current_page desc")
 myresult = mycursor.fetchall()
@@ -45,7 +79,6 @@ for keyStrg in myresult:
     )
     api_call_count+=1
 
-    # print(results_pager.as_dict())
     print("Num results:", results_pager.count)
     total_page = math.ceil(results_pager.count / 150)
     print("Total pages:", total_page)
@@ -78,11 +111,11 @@ for keyStrg in myresult:
                 # exit()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
                 val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
-                print("Processing Freesound ID: ", sound.id)
+                print("\nProcessing Freesound ID: ", sound.id)
                 try:
                     mycursor.execute(sql, val)
                     mydb.commit()
-                    print("\nInserted row: ", sound.id)
+                    print("Inserted row: ", sound.id)
                     # your code
 
                     # Print elapsed time
@@ -92,8 +125,25 @@ for keyStrg in myresult:
                     # Print number of API calls
                     print("API calls: ", str(api_call_count))
 
-                    throttle_check = api_call_count - elapsed_time
-                    throttleCheck(throttle_check)
+                    ###
+                    # After every API call, make a throttle adjustment per second
+                    ###
+                    throttleCheck(api_call_count, elapsed_time, 'per_second')
+
+                    ###
+                    # Only run if daily throttle has not been set to false
+                    ###
+                    if(args.daily_throttle != 'false'):
+                        new_minutes_passed = int(elapsed_time/60)
+                        print("Minutes passed: ", str(new_minutes_passed))
+
+                        if new_minutes_passed > minutes_passed:
+                            minutes_passed = new_minutes_passed
+
+                            ###
+                            # After every minute passed, make a throttle adjustment per minute
+                            ###
+                            throttleCheck(api_call_count, elapsed_time, 'per_minute')
 
                 except mysql.connector.IntegrityError as err:
                     print("Duplicate data Error: {}".format(err))

@@ -27,6 +27,7 @@ mycursor = mydb.cursor()
 mycursor.execute("SELECT item_name,current_page FROM search_keys where search_keys.status != 2 order by search_keys.current_page desc")
 myresult = mycursor.fetchall()
 
+onedaysec = 1*24*60*60
 api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
 # api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
 freesound_client = freesound.FreesoundClient()
@@ -45,12 +46,7 @@ for keyStrg in myresult:
         fields="id,username"
     )
     api_call_count+=1
-    # if(results_pager == 'sleep24'):
-    #     print("Ok")
-    # else:
-    #     print("No",results_pager)
 
-    # exit()
     print("Num results:", results_pager.count)
     total_page = math.ceil(results_pager.count / 150)
     print("Total pages:", total_page)
@@ -77,8 +73,18 @@ for keyStrg in myresult:
                     text_data.id,
                     fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
                 )
-                api_call_count+=1
+                # ----------- Update key serach table on next api call --------------------------
+                if (sound == 'sleep24'):
+                    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    print("----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
+                    time.sleep(onedaysec)
+                    # ------------ Api Call again ---------------
+                    sound = freesound_client.get_sound(
+                        text_data.id,
+                        fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
+                    )
 
+                api_call_count+=1
                 sound_dict = sound.as_dict()
                 # exit()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"

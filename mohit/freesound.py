@@ -247,10 +247,7 @@ class FSRequest:
             if e.code >= 200 and e.code < 300:
                 return resp
             if e.code == 429:
-                now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print("----- Throttle Limit Occured: Run after 24hrs!! ----------",now)
-                time.sleep(86410)
-                f = urlopen(req)
+                return 'sleep24'
             else:
                 raise FreesoundException(e.code, json.loads(resp))
         if py3:        

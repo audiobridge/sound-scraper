@@ -8,7 +8,7 @@ import math
 import datetime
 import time
 
-# Start time
+# ------Start time--------
 start_time = time.time()
 api_call_count = 0
 
@@ -28,6 +28,7 @@ mycursor.execute("SELECT item_name,current_page FROM search_keys where search_ke
 myresult = mycursor.fetchall()
 
 api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
+# api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
 freesound_client = freesound.FreesoundClient()
 freesound_client.set_token(api_key)
 
@@ -35,7 +36,7 @@ for keyStrg in myresult:
     key_string = keyStrg[0]
     key_page = keyStrg[1]
     print("===========Start key========== Page:",key_page,"========:",key_string)
-    
+
     # Get text info details
     results_pager = freesound_client.text_search(
         page=key_page,
@@ -44,8 +45,12 @@ for keyStrg in myresult:
         fields="id,username"
     )
     api_call_count+=1
+    # if(results_pager == 'sleep24'):
+    #     print("Ok")
+    # else:
+    #     print("No",results_pager)
 
-    # print(results_pager.as_dict())
+    # exit()
     print("Num results:", results_pager.count)
     total_page = math.ceil(results_pager.count / 150)
     print("Total pages:", total_page)
@@ -79,6 +84,7 @@ for keyStrg in myresult:
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
                 val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
                 print("Processing Freesound ID: ", sound.id)
+
                 try:
                     mycursor.execute(sql, val)
                     mydb.commit()
@@ -104,7 +110,7 @@ for keyStrg in myresult:
         if total_page != key_page:
             key_page += 1
             val = (key_page,1,now,key_string)
-            print("=========== Key:", key_string, "========== Page:", key_page, "========")
+            print("======= Key:", key_string, "========= Page:", key_page, "=======")
             results_pager = results_pager.next_page()
         else:
             val = (key_page, 2, now, key_string)

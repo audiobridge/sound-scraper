@@ -248,6 +248,7 @@ class FSRequest:
                 return resp
             if e.code == 429:
                 return 'sleep24'
+            
             else:
                 raise FreesoundException(e.code, json.loads(resp))
         if py3:        

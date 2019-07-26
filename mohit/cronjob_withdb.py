@@ -37,7 +37,7 @@ freesound_client.set_token(api_key)
 for keyStrg in myresult:
     key_string = keyStrg[0]
     key_page = keyStrg[1]
-    print("===========Start key========== Page:",key_page,"========:",key_string)
+    print("===========Start key: ",key_string,"==========\n========== Page:",key_page,"========")
 
     # Get text info details
     results_pager = freesound_client.text_search(
@@ -77,7 +77,7 @@ for keyStrg in myresult:
                 # ----------- Update key serach table on next api call --------------------------
                 if (sound == 'sleep24'):
                     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print("----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
+                    print("\n----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
                     time.sleep(onedaysec)
                     # ------------ Api Call again ---------------
                     sound = freesound_client.get_sound(
@@ -86,7 +86,7 @@ for keyStrg in myresult:
                     )
                 if(sound == 'sleep1'):
                     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print("----- Throttle Limit Occured: Run after 1min !! ----------", now)
+                    print("\n----- Throttle Limit Occured: Run after 1min !! ----------", now)
                     time.sleep(oneminsec)
                     # ------------ Api Call again ---------------
                     sound = freesound_client.get_sound(
@@ -99,12 +99,12 @@ for keyStrg in myresult:
                 # exit()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
                 val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
-                print("Processing Freesound ID: ", sound.id)
+                print("Processing ",key_string," Freesound ID: ", sound.id)
 
                 try:
                     mycursor.execute(sql, val)
                     mydb.commit()
-                    print("\nInserted row: ", sound.id)
+                    print("Inserted row: ", sound.id)
                     # your code
 
                     # Print elapsed time
@@ -112,7 +112,7 @@ for keyStrg in myresult:
                     print("Time elapsed: ", elapsed_time)
 
                     # Print number of API calls
-                    print("API calls: ", str(api_call_count))
+                    print("API calls: ", str(api_call_count), "\n")
 
                     throttle_check = api_call_count - elapsed_time
                     throttleCheck(throttle_check)
@@ -126,11 +126,11 @@ for keyStrg in myresult:
         if total_page != key_page:
             key_page += 1
             val = (key_page,1,now,key_string)
-            print("======= Key:", key_string, "========= Page:", key_page, "=======")
+            print("======= Key:", key_string, "=========\n========= Page:", key_page, "=======")
             results_pager = results_pager.next_page()
         else:
             val = (key_page, 2, now, key_string)
-            print("============== End of page search ===================")
+            print("============== End of", key_string, " page search ===================\n")
             key_page += 1
         mycursor.execute(sql, val)
         mydb.commit()

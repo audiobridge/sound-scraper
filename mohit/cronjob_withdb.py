@@ -28,6 +28,7 @@ mycursor.execute("SELECT item_name,current_page FROM search_keys where search_ke
 myresult = mycursor.fetchall()
 
 onedaysec = 1*24*60*60
+oneminsec = 1*60
 api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
 # api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
 freesound_client = freesound.FreesoundClient()
@@ -45,7 +46,7 @@ for keyStrg in myresult:
         query=key_string,
         fields="id,username"
     )
-    api_call_count+=1
+    api_call_count +=1
 
     print("Num results:", results_pager.count)
     total_page = math.ceil(results_pager.count / 150)
@@ -65,7 +66,7 @@ for keyStrg in myresult:
             mycursor.execute(sql, adr)
             isDup = mycursor.fetchall()
             if isDup:
-                print('Duplicate entry : skipped - ',text_data.id)
+                print('Duplicate entry : skipped - ', text_data.id)
                 continue
             else:
                 # print('Start Now...',text_data.id)
@@ -83,8 +84,17 @@ for keyStrg in myresult:
                         text_data.id,
                         fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
                     )
+                if(sound == 'sleep1'):
+                    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    print("----- Throttle Limit Occured: Run after 1min !! ----------", now)
+                    time.sleep(oneminsec)
+                    # ------------ Api Call again ---------------
+                    sound = freesound_client.get_sound(
+                        text_data.id,
+                        fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
+                    )
 
-                api_call_count+=1
+                api_call_count +=1
                 sound_dict = sound.as_dict()
                 # exit()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"

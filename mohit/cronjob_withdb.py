@@ -15,6 +15,9 @@ api_call_count = 0
 api_minute_limit = 60
 api_second_limit = api_minute_limit/60
 
+onedaysec = 1*24*60*60
+oneminsec = 1*60
+
 def throttleCheck(throttle_check):
     if(throttle_check > 0):
         # Sleep for needed time plus 5s as a buffer
@@ -22,13 +25,21 @@ def throttleCheck(throttle_check):
         print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
         time.sleep(time_correction)
 
+def sleepThrottle(response):
+    if("60/minute" in response['detail']):
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print("\n----- Throttle Limit Occured: Run after 1min !! ----------", now)
+        time.sleep(oneminsec)
+    elif("2000/day" in response['detail']):
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print("\n----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
+        time.sleep(onedaysec)
+
 mydb = mysql.connector.connect(host="localhost",user="root",passwd="",database="db_freesound")
 mycursor = mydb.cursor()
 mycursor.execute("SELECT item_name,current_page FROM search_keys where search_keys.status != 2 order by search_keys.current_page desc")
 myresult = mycursor.fetchall()
 
-onedaysec = 1*24*60*60
-oneminsec = 1*60
 api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
 # api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
 freesound_client = freesound.FreesoundClient()
@@ -39,14 +50,21 @@ for keyStrg in myresult:
     key_page = keyStrg[1]
     print("===========Start key: ",key_string,"==========\n========== Page:",key_page,"========")
 
-    # Get text info details
-    results_pager = freesound_client.text_search(
-        page=key_page,
-        page_size=150,
-        query=key_string,
-        fields="id,username"
-    )
-    api_call_count +=1
+    while(True):
+        # Get text info details
+        results_pager = freesound_client.text_search(
+            page=key_page,
+            page_size=150,
+            query=key_string,
+            fields="id,username"
+        )
+        api_call_count +=1
+        response = json.loads(results_pager)
+
+        if('detail' not in response):
+            break
+        
+        sleepThrottle(response)
 
     print("Num results:", results_pager.count)
     total_page = math.ceil(results_pager.count / 150)
@@ -69,32 +87,19 @@ for keyStrg in myresult:
                 print('Duplicate entry : skipped - ', text_data.id)
                 continue
             else:
-                # print('Start Now...',text_data.id)
-                sound = freesound_client.get_sound(
-                    text_data.id,
-                    fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
-                )
-                # ----------- Update key serach table on next api call --------------------------
-                if (sound == 'sleep24'):
-                    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print("\n----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
-                    time.sleep(onedaysec)
-                    # ------------ Api Call again ---------------
+                while(True):
                     sound = freesound_client.get_sound(
                         text_data.id,
                         fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
                     )
-                if(sound == 'sleep1'):
-                    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print("\n----- Throttle Limit Occured: Run after 1min !! ----------", now)
-                    time.sleep(oneminsec)
-                    # ------------ Api Call again ---------------
-                    sound = freesound_client.get_sound(
-                        text_data.id,
-                        fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
-                    )
+                    api_call_count +=1
+                    response = json.loads(sound)
 
-                api_call_count +=1
+                    if('detail' not in response):
+                        break
+                    
+                    sleepThrottle(response)
+
                 sound_dict = sound.as_dict()
                 # exit()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"

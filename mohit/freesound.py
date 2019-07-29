@@ -247,7 +247,11 @@ class FSRequest:
             if e.code >= 200 and e.code < 300:
                 return resp
             if e.code == 429:
-                return resp
+                error = json.loads(resp)
+                if ("60/minute" in error['detail']):
+                    return 'sleep1'
+                else:
+                    return 'sleep24'
             else:
                 raise FreesoundException(e.code, json.loads(resp))
         if py3:        

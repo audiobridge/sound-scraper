@@ -1,5 +1,6 @@
 from __future__ import print_function
 import freesound
+import throttle
 import os
 import sys
 import json
@@ -15,27 +16,17 @@ api_call_count = 0
 api_minute_limit = 60
 api_second_limit = api_minute_limit/60
 
-def throttleCheck(throttle_check):
-    if(throttle_check > 0):
-        # Sleep for needed time plus 5s as a buffer
-        time_correction = throttle_check + 5
-        print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
-        time.sleep(time_correction)
-
 mydb = mysql.connector.connect(host="localhost",user="root",passwd="",database="db_freesound")
 mycursor = mydb.cursor()
 mycursor.execute("SELECT item_name,current_page FROM search_keys where search_keys.status != 2 order by search_keys.current_page desc")
 myresult = mycursor.fetchall()
 
-onedaysec = 1*24*60*60
-oneminsec = 1*60
-apiKeyList = ['Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X','wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO','RI4iCamKAABlCVDXStAx49pnNVmb0XSzc6po1qbk']
+throttleCheck = throttle.FreesoundThrottle()
+
 apiKeyPointer = 0
-apiKeyCount = len(apiKeyList)
-print("======== Api Key Load:",apiKeyList[apiKeyPointer],"===========",apiKeyPointer)
-api_key = os.getenv('FREESOUND_API_KEY',apiKeyList[apiKeyPointer])
+api_key = throttleCheck.apiKeyCycle(apiKeyPointer)
 apiKeyPointer = apiKeyPointer + 1
-# api_key = os.getenv('FREESOUND_API_KEY', 'wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO')
+
 freesound_client = freesound.FreesoundClient()
 freesound_client.set_token(api_key)
 
@@ -46,28 +37,10 @@ for keyStrg in myresult:
     else:
         key_page=1
 
-    print("===========Start key========== Page:",key_page,"========:",key_string)
-    # Get text info details
-    results_pager = freesound_client.text_search(
-        page=key_page,
-        page_size=150,
-        query=key_string,
-        fields="id,username"
-    )
-
-    if (results_pager == 'sleep24'):
-        # ------- Set Another Token if 2000 Call consume-------
-        if (apiKeyPointer < apiKeyCount):
-            print("======== Api Key Load: ", apiKeyList[apiKeyPointer], "===========", apiKeyPointer)
-            api_key = os.getenv('FREESOUND_API_KEY', apiKeyList[apiKeyPointer])
-            apiKeyPointer = apiKeyPointer + 1
-            freesound_client = freesound.FreesoundClient()
-            freesound_client.set_token(api_key)
-        else:
-            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print("----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
-            time.sleep(onedaysec)
-        # ------------ Api Call again -------------------
+    print("===========Start key: ",key_string,"==========\n========== Page:",key_page,"========")
+    
+    while(True):
+        # Get text info details
         results_pager = freesound_client.text_search(
             page=key_page,
             page_size=150,
@@ -75,19 +48,19 @@ for keyStrg in myresult:
             fields="id,username"
         )
 
-    if (results_pager == 'sleep1'):
-        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print("----- Throttle Limit Occured: Run after 1min !! ----------", now)
-        time.sleep(oneminsec)
-        # ------------ Api Call again ---------------
-        results_pager = freesound_client.text_search(
-            page=key_page,
-            page_size=150,
-            query=key_string,
-            fields="id,username"
-        )
+        api_call_count +=1
+        response = json.loads(results_pager)
 
-    api_call_count +=1
+        # The 'detail' key in the response is only return on a 429 error.
+        # We look for that key and if we do not find it, we know it was a successful API call and we break out of the while loop.
+        # Otherwise we throttle check and repeat.
+        if('detail' not in response):
+            break
+        
+        # During the sleep throttle, if it is a single minute, it just returns the currently used API key, if it is 24 hours, it cycles to the next API key
+        api_key, apiKeyPointer = throttleCheck.sleepThrottle(response, apiKeyPointer)
+        freesound_client.set_token(api_key)
+
     print("Num results:", results_pager.count)
     total_page = int(math.ceil(results_pager.count / 150))
     print("Total pages:", total_page)
@@ -109,46 +82,29 @@ for keyStrg in myresult:
                 print('Duplicate entry : skipped - ', text_data.id)
                 continue
             else:
-                # print('Start Now...',text_data.id)
-                sound = freesound_client.get_sound(
-                    text_data.id,
-                    fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
-                )
-                # ----------- Update key serach table on next api call --------------------------
-                if (sound == 'sleep24'):
-                    # ------- Set Another Token if 2000 Call consume-----
-                    if(apiKeyPointer < apiKeyCount):
-                        print("======== Api Key Load: ", apiKeyList[apiKeyPointer], "===========", apiKeyPointer)
-                        api_key = os.getenv('FREESOUND_API_KEY', apiKeyList[apiKeyPointer])
-                        apiKeyPointer = apiKeyPointer + 1
-                        freesound_client = freesound.FreesoundClient()
-                        freesound_client.set_token(api_key)
-                    else:
-                        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        print("----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
-                        time.sleep(onedaysec)
-                    # ------------ Api Call again --------------------
+                while(True):
                     sound = freesound_client.get_sound(
                         text_data.id,
                         fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
                     )
+                    api_call_count +=1
+                    response = json.loads(sound)
 
-                if(sound == 'sleep1'):
-                    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print("----- Throttle Limit Occured: Run after 1min !! ----------", now)
-                    time.sleep(oneminsec)
-                    # ------------ Api Call again ---------------
-                    sound = freesound_client.get_sound(
-                        text_data.id,
-                        fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
-                    )
+                    # The 'detail' key in the response is only return on a 429 error.
+                    # We look for that key and if we do not find it, we know it was a successful API call and we break out of the while loop.
+                    # Otherwise we throttle check and repeat.
+                    if('detail' not in response):
+                        break
+                    
+                    # During the sleep throttle, if it is a single minute, it just returns the currently used API key, if it is 24 hours, it cycles to the next API key
+                    api_key, apiKeyPointer = throttleCheck.sleepThrottle(response, apiKeyPointer)
+                    freesound_client.set_token(api_key)
 
-                api_call_count +=1
                 sound_dict = sound.as_dict()
                 # exit()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
                 val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
-                print("Processing Freesound ID: ", sound.id)
+                print("Processing ",key_string," Freesound ID: ", sound.id)
 
                 try:
                     mycursor.execute(sql, val)
@@ -175,11 +131,11 @@ for keyStrg in myresult:
         if total_page != key_page:
             key_page += 1
             val = (key_page,1,now,key_string)
-            print("======= Key:", key_string, "========= Page:", key_page, "=======")
+            print("======= Key:", key_string, "=========\n========= Page:", key_page, "=======")
             results_pager = results_pager.next_page()
         else:
             val = (key_page, 2, now, key_string)
-            print("============== End of page search ===================")
+            print("============== End of", key_string, " page search ===================\n")
             key_page += 1
         mycursor.execute(sql, val)
         mydb.commit()

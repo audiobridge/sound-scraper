@@ -29,16 +29,24 @@ myresult = mycursor.fetchall()
 
 onedaysec = 1*24*60*60
 oneminsec = 1*60
-api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
-# api_key = os.getenv('FREESOUND_API_KEY', 'Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X')
+apiKeyList = ['Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X','wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO','RI4iCamKAABlCVDXStAx49pnNVmb0XSzc6po1qbk']
+apiKeyPointer = 0
+apiKeyCount = len(apiKeyList)
+print("======== Api Key Load:",apiKeyList[apiKeyPointer],"===========",apiKeyPointer)
+api_key = os.getenv('FREESOUND_API_KEY',apiKeyList[apiKeyPointer])
+apiKeyPointer = apiKeyPointer + 1
+# api_key = os.getenv('FREESOUND_API_KEY', 'wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO')
 freesound_client = freesound.FreesoundClient()
 freesound_client.set_token(api_key)
 
 for keyStrg in myresult:
     key_string = keyStrg[0]
-    key_page = keyStrg[1]
-    print("===========Start key========== Page:",key_page,"========:",key_string)
+    if(keyStrg[1] > 1):
+        key_page = keyStrg[1]
+    else:
+        key_page=1
 
+    print("===========Start key========== Page:",key_page,"========:",key_string)
     # Get text info details
     results_pager = freesound_client.text_search(
         page=key_page,
@@ -46,10 +54,42 @@ for keyStrg in myresult:
         query=key_string,
         fields="id,username"
     )
-    api_call_count +=1
 
+    if (results_pager == 'sleep24'):
+        # ------- Set Another Token if 2000 Call consume-------
+        if (apiKeyPointer < apiKeyCount):
+            print("======== Api Key Load: ", apiKeyList[apiKeyPointer], "===========", apiKeyPointer)
+            api_key = os.getenv('FREESOUND_API_KEY', apiKeyList[apiKeyPointer])
+            apiKeyPointer = apiKeyPointer + 1
+            freesound_client = freesound.FreesoundClient()
+            freesound_client.set_token(api_key)
+        else:
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print("----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
+            time.sleep(onedaysec)
+        # ------------ Api Call again -------------------
+        results_pager = freesound_client.text_search(
+            page=key_page,
+            page_size=150,
+            query=key_string,
+            fields="id,username"
+        )
+
+    if (results_pager == 'sleep1'):
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print("----- Throttle Limit Occured: Run after 1min !! ----------", now)
+        time.sleep(oneminsec)
+        # ------------ Api Call again ---------------
+        results_pager = freesound_client.text_search(
+            page=key_page,
+            page_size=150,
+            query=key_string,
+            fields="id,username"
+        )
+
+    api_call_count +=1
     print("Num results:", results_pager.count)
-    total_page = math.ceil(results_pager.count / 150)
+    total_page = int(math.ceil(results_pager.count / 150))
     print("Total pages:", total_page)
 
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -76,14 +116,23 @@ for keyStrg in myresult:
                 )
                 # ----------- Update key serach table on next api call --------------------------
                 if (sound == 'sleep24'):
-                    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    print("----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
-                    time.sleep(onedaysec)
-                    # ------------ Api Call again ---------------
+                    # ------- Set Another Token if 2000 Call consume-----
+                    if(apiKeyPointer < apiKeyCount):
+                        print("======== Api Key Load: ", apiKeyList[apiKeyPointer], "===========", apiKeyPointer)
+                        api_key = os.getenv('FREESOUND_API_KEY', apiKeyList[apiKeyPointer])
+                        apiKeyPointer = apiKeyPointer + 1
+                        freesound_client = freesound.FreesoundClient()
+                        freesound_client.set_token(api_key)
+                    else:
+                        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        print("----- Throttle Limit Occured: Run after 24hrs!! ----------", now)
+                        time.sleep(onedaysec)
+                    # ------------ Api Call again --------------------
                     sound = freesound_client.get_sound(
                         text_data.id,
                         fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
                     )
+
                 if(sound == 'sleep1'):
                     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     print("----- Throttle Limit Occured: Run after 1min !! ----------", now)

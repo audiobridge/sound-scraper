@@ -4,6 +4,7 @@
     <list default="true" id="f7dad8bc-7be5-402e-8749-c7764e6ae098" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mohit/cronjob_withdb.py" beforeDir="false" afterPath="$PROJECT_DIR$/mohit/cronjob_withdb.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mohit/freesound.py" beforeDir="false" afterPath="$PROJECT_DIR$/mohit/freesound.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

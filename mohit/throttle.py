@@ -1,11 +1,11 @@
 import time
 
 class FreesoundThrottle():
-	self.onedaysec = 1*24*60*60
-	self.oneminsec = 1*60
-	self.apiKeyList = ['Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X','wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO','RI4iCamKAABlCVDXStAx49pnNVmb0XSzc6po1qbk']
+	onedaysec = 1*24*60*60
+	oneminsec = 1*60
+	apiKeyList = ['Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X','wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO','RI4iCamKAABlCVDXStAx49pnNVmb0XSzc6po1qbk']
 
-	def throttleCheck(throttle_check):
+	def throttleCheck(self, throttle_check):
 
 	    if(throttle_check > 0):
 	        # Sleep for needed time plus 5s as a buffer
@@ -13,7 +13,7 @@ class FreesoundThrottle():
 	        print("Sleeping for " + str(time_correction) + " seconds to control throttling.")
 	        time.sleep(time_correction)
 
-	def sleepThrottle(response, pointer):
+	def sleepThrottle(self, response, pointer):
 
 	    if("60/minute" in response['detail']):
 	        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -30,15 +30,14 @@ class FreesoundThrottle():
 	        	print("----- All API Keys used for the day; Resting for 24 hours ----------")
 	        	time.sleep(onedaysec)
 
-	        print("----- API Key Switched to ",api_key,". Continuing... ----------")
+		print("----- API Key Switched to " + api_key + " ----------")
+		return api_key, pointer
 
-	    return api_key, pointer
-
-    def apiKeyCycle(pointer):
+	def apiKeyCycle(self, pointer):
 		apiKeyCount = len(self.apiKeyList)
 
 		# If we have reached the end of the list, start back from the beginning and return 0 as the pointer
-		if(apiKeyPointer >= apiKeyCount):
+		if(pointer >= apiKeyCount):
 			pointer = 0
 
 		return self.apiKeyList[pointer], pointer

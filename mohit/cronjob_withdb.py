@@ -24,8 +24,7 @@ myresult = mycursor.fetchall()
 throttleCheck = throttle.FreesoundThrottle()
 
 apiKeyPointer = 0
-api_key = throttleCheck.apiKeyCycle(apiKeyPointer)
-apiKeyPointer = apiKeyPointer + 1
+api_key, apiKeyPointer = throttleCheck.apiKeyCycle(apiKeyPointer)
 
 freesound_client = freesound.FreesoundClient()
 freesound_client.set_token(api_key)
@@ -49,6 +48,11 @@ for keyStrg in myresult:
         )
 
         api_call_count +=1
+
+        # Check to see if the response is a paged Freesound response
+        # if not, continue
+        if isinstance(results_pager, freesound.Pager): break
+            
         response = json.loads(results_pager)
 
         # The 'detail' key in the response is only return on a 429 error.
@@ -56,8 +60,10 @@ for keyStrg in myresult:
         # Otherwise we throttle check and repeat.
         if('detail' not in response):
             break
-        
-        # During the sleep throttle, if it is a single minute, it just returns the currently used API key, if it is 24 hours, it cycles to the next API key
+    
+        # During the sleep throttle, if it is a single minute,
+        # it just returns the currently used API key, if it is 24 hours,
+        # it cycles to the next API key
         api_key, apiKeyPointer = throttleCheck.sleepThrottle(response, apiKeyPointer)
         freesound_client.set_token(api_key)
 
@@ -88,6 +94,11 @@ for keyStrg in myresult:
                         fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
                     )
                     api_call_count +=1
+
+                    # Check to see if the response is a paged Freesound response
+                    # if not, continue
+                    if isinstance(sound, freesound.Pager): break
+
                     response = json.loads(sound)
 
                     # The 'detail' key in the response is only return on a 429 error.

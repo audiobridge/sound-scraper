@@ -1,4 +1,4 @@
-import time
+import datetime, time
 
 class FreesoundThrottle():
 	onedaysec = 1*24*60*60
@@ -17,7 +17,7 @@ class FreesoundThrottle():
 
 	    if("60/minute" in response['detail']):
 	        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-	        print("\n----- Throttle Limit Occured: Run after 1min !! ----------", now)
+	        print("\n----- Throttle Limit Occured: Run after 1min (" + now + ") !! ----------")
 	        time.sleep(self.oneminsec)
 
 	    elif("2000/day" in response['detail']):

@@ -106,7 +106,7 @@ for keyStrg in myresult:
                     # Otherwise we throttle check and repeat.
                     if('detail' not in response):
                         break
-                    
+
                     # During the sleep throttle, if it is a single minute, it just returns the currently used API key, if it is 24 hours, it cycles to the next API key
                     api_key, apiKeyPointer = throttleCheck.sleepThrottle(response, apiKeyPointer)
                     freesound_client.set_token(api_key)

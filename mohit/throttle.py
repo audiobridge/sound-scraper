@@ -14,23 +14,24 @@ class FreesoundThrottle():
 	        time.sleep(time_correction)
 
 	def sleepThrottle(self, response, pointer):
+		api_key = self.apiKeyList[pointer]
 
-	    if("60/minute" in response['detail']):
-	        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-	        print("\n----- Throttle Limit Occured: Run after 1min (" + now + ") !! ----------")
-	        time.sleep(self.oneminsec)
+		if("60/minute" in response['detail']):
+			now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+			print("\n----- Throttle Limit Occured: Run after 1min (" + now + ") !! ----------")
+			time.sleep(self.oneminsec)
+		elif("2000/day" in response['detail']):
+			print("\n----- 24 Hour Throttle Limit Occured; Cycling to next API Key ----------")
+			pointer = pointer + 1
+			api_key, pointer = self.apiKeyCycle(pointer)
+			
+			# If pointer is returned as 0, it means we have cycled through all available keys and need to take a quick rest
+			if(pointer == 0):
+				print("----- All API Keys used for the day; Resting for 24 hours ----------")
+				time.sleep(onedaysec)
 
-	    elif("2000/day" in response['detail']):
-	        print("\n----- 24 Hour Throttle Limit Occured; Cycling to next API Key ----------")
-	        pointer = pointer + 1
-	        api_key, pointer = self.apiKeyCycle(pointer)
+			print("----- API Key Switched to " + api_key + " ----------")
 
-	        # If pointer is returned as 0, it means we have cycled through all available keys and need to take a quick rest
-	        if(pointer == 0):
-	        	print("----- All API Keys used for the day; Resting for 24 hours ----------")
-	        	time.sleep(onedaysec)
-
-		print("----- API Key Switched to " + api_key + " ----------")
 		return api_key, pointer
 
 	def apiKeyCycle(self, pointer):

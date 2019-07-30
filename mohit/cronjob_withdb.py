@@ -95,9 +95,9 @@ for keyStrg in myresult:
                     )
                     api_call_count +=1
 
-                    # Check to see if the response is a paged Freesound response
-                    # if not, continue
-                    if isinstance(sound, freesound.Pager): break
+                    # Issue with 'Sound' class showing up as 'instance' type
+                    # Instead we'll check if it's a string or not for now
+                    if not isinstance(sound, basestring): break
 
                     response = json.loads(sound)
 
@@ -131,7 +131,7 @@ for keyStrg in myresult:
                     print("API calls: ", str(api_call_count))
 
                     throttle_check = api_call_count - elapsed_time
-                    throttleCheck(throttle_check)
+                    throttleCheck.cycleCheck(throttle_check)
 
                 except mysql.connector.IntegrityError as err:
                     print("Duplicate data Error: {}".format(err))

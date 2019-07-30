@@ -5,7 +5,7 @@ class FreesoundThrottle():
 	oneminsec = 1*60
 	apiKeyList = ['Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X','wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO','RI4iCamKAABlCVDXStAx49pnNVmb0XSzc6po1qbk']
 
-	def throttleCheck(self, throttle_check):
+	def cycleCheck(self, throttle_check):
 
 	    if(throttle_check > 0):
 	        # Sleep for needed time plus 5s as a buffer

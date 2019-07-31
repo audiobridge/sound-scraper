@@ -28,7 +28,7 @@ class FreesoundThrottle():
 			# If pointer is returned as 0, it means we have cycled through all available keys and need to take a quick rest
 			if(pointer == 0):
 				print("----- All API Keys used for the day; Resting for 24 hours ----------")
-				time.sleep(onedaysec)
+				time.sleep(self.onedaysec)
 
 			print("----- API Key Switched to " + api_key + " ----------")
 

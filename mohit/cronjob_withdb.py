@@ -44,7 +44,7 @@ for keyStrg in myresult:
             page=key_page,
             page_size=150,
             query=key_string,
-            fields="id,username"
+            fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
         )
 
         api_call_count +=1
@@ -79,40 +79,16 @@ for keyStrg in myresult:
 
     # ---------Page wise data loop - start fetching-----------
     while total_page >= key_page: # print(vars(results_pager))
-        for text_data in results_pager:
+        for sound in results_pager:
             sql = "SELECT * FROM tbl_sounds WHERE freesound_id = %s"
-            adr = (text_data.id,)
+            adr = (sound.id,)
             mycursor.execute(sql, adr)
             isDup = mycursor.fetchall()
             if isDup:
-                print('Duplicate entry : skipped - ', text_data.id)
+                print('Duplicate entry : skipped - ', sound.id)
                 continue
             else:
-                while(True):
-                    sound = freesound_client.get_sound(
-                        text_data.id,
-                        fields="id,name,tags,created,type,channels,filesize,bitrate,bitdepth,duration,samplerate,download,images,analysis_stats,ac_analysis"
-                    )
-                    api_call_count +=1
-
-                    # Issue with 'Sound' class showing up as 'instance' type
-                    # Instead we'll check if it's a string or not for now
-                    if not isinstance(sound, basestring): break
-
-                    response = json.loads(sound)
-
-                    # The 'detail' key in the response is only return on a 429 error.
-                    # We look for that key and if we do not find it, we know it was a successful API call and we break out of the while loop.
-                    # Otherwise we throttle check and repeat.
-                    if('detail' not in response):
-                        break
-
-                    # During the sleep throttle, if it is a single minute, it just returns the currently used API key, if it is 24 hours, it cycles to the next API key
-                    api_key, apiKeyPointer = throttleCheck.sleepThrottle(response, apiKeyPointer)
-                    freesound_client.set_token(api_key)
-
-                sound_dict = sound.as_dict()
-                # exit()
+                sound_dict = results_pager.as_dict()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
                 val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
                 print("Processing ",key_string," Freesound ID: ", sound.id)

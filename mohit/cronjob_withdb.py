@@ -120,6 +120,7 @@ for keyStrg in myresult:
             val = (key_page,1,now,key_string)
             print("======= Key:", key_string, "=========\n========= Page:", key_page, "=======")
             results_pager = results_pager.next_page()
+            api_call_count +=1
         else:
             val = (key_page, 2, now, key_string)
             print("============== End of", key_string, " page search ===================\n")

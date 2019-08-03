@@ -92,7 +92,7 @@ for keyStrg in myresult:
                 sound_dict = results_pager.as_dict()
                 sql = "INSERT INTO tbl_sounds (freesound_id,search_key,name,filesize,duration, json_dump, created) VALUES (%s,%s,%s,%s,%s,%s,%s)"
                 val = (sound.id,key_string, sound.name, sound.filesize, sound.duration,(json.dumps(sound_dict)),sound.created)
-                print("\nProcessing ",key_string," Freesound ID: ", sound.id)
+                print("Processing ",key_string," Freesound ID: ", sound.id)
 
                 try:
                     mycursor.execute(sql, val)

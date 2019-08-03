@@ -80,8 +80,9 @@ for keyStrg in myresult:
     # ---------Page wise data loop - start fetching-----------
     while total_page >= key_page: # print(vars(results_pager))
         for sound in results_pager:
-            sql = "SELECT * FROM tbl_sounds WHERE freesound_id = %s"
+            sql = "SELECT id FROM tbl_sounds WHERE freesound_id = %s"
             adr = (sound.id,)
+            print("\nChecking database for duplicates...")
             mycursor.execute(sql, adr)
             isDup = mycursor.fetchall()
             if isDup:

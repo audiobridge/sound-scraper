@@ -3,7 +3,7 @@ import datetime, time
 class FreesoundThrottle():
 	onedaysec = 1*24*60*60
 	oneminsec = 1*60
-	apiKeyList = ['Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X','wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO','RI4iCamKAABlCVDXStAx49pnNVmb0XSzc6po1qbk']
+	apiKeyList = ['Q20UuCpItgvCIlTvzpoFsh9NxoNKXnaz9plBkw3X','wLDvgpuiWsXZP8QVmSUIixeHDjmogiWH9k72PpDO','RI4iCamKAABlCVDXStAx49pnNVmb0XSzc6po1qbk', 'Src4AQ5Ct2fbrZOzk3HnGYkmrjf4Lx3BXjTUNfaZ']
 
 	def cycleCheck(self, throttle_check):
 
